@@ -428,9 +428,8 @@ class Backend(ldapcherry.backend.Backend):
                 # attribute is not set, just add it
                 else:
                     old = {}
-                ldif = modlist.modifyModlist(old, new)
                 try:
-                    ldap_client.modify_s(dn, ldif)
+                    ldap_client.modify_s(dn,[(ldap.MOD_REPLACE,new.keys()[0],new.values()[0])])
                 except Exception as e:
                     ldap_client.unbind_s()
                     self._exception_handler(e)
