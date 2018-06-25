@@ -42,7 +42,7 @@ class Roles:
         self.roles = {}
         self.flatten = {}
         self.group2roles = {}
-        self.admin_roles = []
+        self.admin_roles = ['hcc-admins']
         self._nest()
 
     def _merge_groups(self, backends_list):
