@@ -33,6 +33,8 @@ from mako import lookup
 from mako import exceptions
 from sets import Set
 
+import duo_web
+
 SESSION_KEY = '_cp_username'
 
 
@@ -210,6 +212,26 @@ class LdapCherry(object):
         for file in os.listdir(directory):
             if file.endswith(".js"):
                 self.custom_js.append(file)
+
+    def _init_duo(self,config):
+        self.duo_config = {}
+        self.duo_config['ikey'] = self._get_param(
+            'duo',
+            'ikey',
+            config)
+        self.duo_config['akey'] = self._get_param(
+            'duo',
+            'akey',
+            config)
+        self.duo_config['skey'] = self._get_param(
+            'duo',
+            'skey',
+            config)
+        self.duo_config['api_hostname'] = self._get_param(
+            'duo',
+            'api_hostname',
+            config)
+
 
     def _init_ppolicy(self, config):
         module = self._get_param(
@@ -394,7 +416,7 @@ class LdapCherry(object):
         for t in ('index.tmpl', 'error.tmpl', 'login.tmpl', '404.tmpl',
                   'searchadmin.tmpl', 'searchuser.tmpl', 'adduser.tmpl',
                   'roles.tmpl', 'groups.tmpl', 'form.tmpl', 'selfmodify.tmpl',
-                  'modify.tmpl', 'service_unavailable.tmpl'
+                  'modify.tmpl', 'service_unavailable.tmpl', 'duo.tmpl'
                   ):
             self.temp[t] = self.temp_lookup.get_template(t)
 
@@ -450,6 +472,9 @@ class LdapCherry(object):
 
             # loading custom javascript
             self._init_custom_js(config)
+
+            # load the Duo config
+            self._init_duo(config)
 
             cherrypy.log.error(
                 msg="application started",
@@ -893,47 +918,60 @@ class LdapCherry(object):
 
     @cherrypy.expose
     @exception_decorator
-    def login(self, login, password, url=None):
+    def login(self, login=None, password=None, url=None, sig_request=None, sig_response=None):
         """login page
         """
-        auth = self._auth(login, password)
-        cherrypy.session['isadmin'] = auth['isadmin']
-        cherrypy.session['connected'] = auth['connected']
+        if not sig_response:
+            auth = self._auth(login, password)
+            cherrypy.session['isadmin'] = auth['isadmin']
+            cherrypy.session['connected'] = auth['connected']
 
-        if auth['connected']:
-            if auth['isadmin']:
-                message = \
+            if auth['connected']:
+                if auth['isadmin']:
+                    message = \
                     "login success for user '%(user)s' as administrator" % {
                         'user': login
-                    }
+                        }
+                else:
+                    message = \
+                        "login success for user '%(user)s' as normal user" % {
+                            'user': login
+                        }
+                cherrypy.log.error(
+                    msg=message,
+                    severity=logging.INFO
+                )
+
+                sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
+                    self.duo_config['akey'], login)
+                return self.temp['duo.tmpl'].render(url=url,host=self.duo_config['api_hostname'],sig_request=sig_request)
+
             else:
-                message = \
-                    "login success for user '%(user)s' as normal user" % {
-                        'user': login
-                    }
-            cherrypy.log.error(
-                msg=message,
-                severity=logging.INFO
-            )
-            cherrypy.session[SESSION_KEY] = cherrypy.request.login = login
-            if url is None:
-                redirect = "/"
-            else:
-                redirect = base64.b64decode(url)
-            raise cherrypy.HTTPRedirect(redirect)
+                message = "login failed for user '%(user)s'" % {
+                    'user': login
+                }
+                cherrypy.log.error(
+                    msg=message,
+                    severity=logging.WARNING
+                )
+                if url is None:
+                    qs = ''
+                else:
+                    qs = '?url=' + url
+                raise cherrypy.HTTPRedirect("/signin" + qs)
         else:
-            message = "login failed for user '%(user)s'" % {
-                'user': login
-            }
-            cherrypy.log.error(
-                msg=message,
-                severity=logging.WARNING
-            )
-            if url is None:
-                qs = ''
-            else:
-                qs = '?url=' + url
-            raise cherrypy.HTTPRedirect("/signin" + qs)
+            authenticated_username = duo_web.verify_response(self.duo_config['ikey'], self.duo_config['skey'], \
+                self.duo_config['akey'], sig_response)
+            if authenticated_username:
+                cherrypy.log.error(msg="Duo auth succeeded for %s" % authenticated_username,severity=logging.INFO)
+                cherrypy.session[SESSION_KEY] = cherrypy.request.login = authenticated_username
+                if url is None:
+                    redirect = "/"
+                else:
+                    redirect = base64.b64decode(url)
+                raise cherrypy.HTTPRedirect(redirect)
+
+
 
     @cherrypy.expose
     @exception_decorator
