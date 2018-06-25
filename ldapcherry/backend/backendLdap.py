@@ -14,7 +14,8 @@ import ldapcherry.backend
 from sets import Set
 from ldapcherry.exceptions import UserDoesntExist, \
     GroupDoesntExist, \
-    UserAlreadyExists
+    UserAlreadyExists, \
+    BadPassword
 import os
 import re
 
@@ -148,6 +149,14 @@ class Backend(ldapcherry.backend.Backend):
                 severity=logging.ERROR,
                 msg="adding user failed, " + desc,
                 )
+        elif et is ldap.CONSTRAINT_VIOLATION:
+            info = e[0]['info']
+            desc = e[0]['desc']
+            self._logger(
+                severity=logging.ERROR,
+                msg="Constraint violation: " +
+                desc + " " + info)
+            raise BadPassword(self.userdn,self.backend_name,info)
         else:
             self._logger(
                 severity=logging.ERROR,

@@ -216,6 +216,12 @@ class GroupDoesntExist(Exception):
             " does not exist" \
             " in backend '" + backend + "'"
 
+class BadPassword(Exception):
+    def __init__(self,user,backend,info):
+        self.info = info
+        self.log = "Bad password for user " + \
+        user + " in backend " + backend + ": " + \
+        self.info
 
 class TemplateRenderError(Exception):
     def __init__(self, error):
@@ -259,6 +265,12 @@ def exception_decorator(func):
                     is_admin=is_admin,
                     alert='danger',
                     message="Missing group, please check logs for details"
+                    )
+            elif et is BadPassword:
+                return self.temp['error.tmpl'].render(
+                    is_admin=is_admin,
+                    alert='danger',
+                    message="There is a problem with the password: " + e.info
                     )
             else:
                 return self.temp['error.tmpl'].render(
