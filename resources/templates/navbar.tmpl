@@ -6,8 +6,10 @@
 			<nav class="navbar navbar-inverse" role="navigation">
                 <div class="navbar-header">
                      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1"> <span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button>
-                <a class="navbar-brand" href="/"><img src="/static/img/icon.png" alt="LdapCherry" height="22" width="22"></a>
-                <a class="navbar-brand" href="/selfmodify">Self Modify</a>
+                <img src="/static/img/Nebraska_N.png" class="navbar-icon pull-left">
+                <span class="navbar-brand pull-left" id="welcomemsg">HCC User Portal</span>
+                <a class="navbar-brand" href="/">My Details</a>
+                <a class="navbar-brand" href="/selfmodify">Update Account</a>
                 % if is_admin:
                 <a class="navbar-brand" href="/adduser">Add User</a>
                 <a class="navbar-brand" href="/searchadmin">Delete/Modify User</a>

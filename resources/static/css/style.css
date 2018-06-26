@@ -1,0 +1,80 @@
+body {
+  font-family: "Mercury SSm A","Mercury SSm B",Georgia,Baskerville,"Baskerville Old Face","Hoefler Text",Garamond,"Times New Roman",serif;
+  color: #545350;
+  background: #FEFDFA
+}
+
+h1, h2, h3, h4, h5 {
+ font-family: "Tungsten A","Tungsten B",Impact,Haettenschweiler,"Arial Narrow Bold","Franklin Gothic Bold",Charcoal,"Helvetica Inserat","Bitstream Vera Sans Bold","Arial Black",sans-serif;
+}
+
+.navbar-inverse {
+  font-size: 16px;
+  background-color: #D00000;
+  border-color: #D00000;
+  color: #FFFFFF !important;
+}
+
+.navbar-brand {
+  font-size: 16px;
+}
+
+//a.navbar-inverse {
+//  color: #FFFFFF;
+//}
+
+a.navbar-brand {
+  color: #FFFFFF !important;
+}
+
+img.navbar-icon {
+  max-height: 40px;
+  margin-left: 5px;
+  margin-top: 5px;
+}
+
+#welcomemsg{
+  font-size: 14px;
+  color: #FFFFFF;
+  font-style: italic;
+}
+
+.well {
+  background-color: #F8F5EC;
+}
+
+.panel {
+  background-color: #F8F5EC;
+}
+
+.panel-title {
+  font-size: 24px;
+}
+
+.navbar .form-control {
+  font-size: 10px;
+}
+
+.form-signin-heading {
+  text-align:  center;
+}
+
+#login-header {
+  background-color: #D00000;
+  height: 70px;
+  border-radius: 5px;
+}
+
+#login-header img {
+  max-height: 60px;
+}
+
+#login-header h2 {
+  display: inline;
+  color: #FFFFFF;
+  float: right;
+}
+
+#hcc-contact {
+  text-align: center;
+}

@@ -1,9 +1,15 @@
 ## -*- coding: utf-8 -*-
 <%inherit file="base.tmpl"/>
 <%block name="core">
+    <div class="row clearfix">
+    <div class="col-md-12 column" id="login-header">
+       <img src="/static/img/Nebraska_N.png" class="navbar-icon">
+       <h2>UNIVERSITY OF NEBRASKA</h2>
+    </div>
+    </div>
     <div class="row clearfix" style="margin-top:30px">
-        <div class="col-md-4 column"></div>
-        <div class="col-md-4 column well">
+        <div class="col-md-3 column"></div>
+        <div class="col-md-6 column well">
 <%
 if url is None:
     qs=''
@@ -12,7 +18,7 @@ else:
 %>
             <form method='POST' action='/login${qs}' role="form" class="form-signin">
               <div class="form-group">
-              <h2 class="form-signin-heading">Please sign in</h2>
+              <h2 class="form-signin-heading">Welcome to the Holland Computing Center User Portal <br/>Please sign in with your HCC credentials</h2>
                 <div class="input-group">
                     <span class="input-group-addon glyphicon glyphicon-user"></span>
                     <input type="text" class="form-control" name="login" placeholder="Login" required autofocus>
@@ -31,6 +37,7 @@ else:
               </div>
             </form>
         </div>
-        <div class="col-md-4 column"></div>
+        <div class="col-md-3 column"></div>
     </div>
+
 </%block>
