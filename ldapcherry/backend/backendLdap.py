@@ -15,7 +15,8 @@ from sets import Set
 from ldapcherry.exceptions import UserDoesntExist, \
     GroupDoesntExist, \
     UserAlreadyExists, \
-    BadPassword
+    BadPassword, \
+    AccountLocked
 import os
 import re
 
@@ -157,6 +158,13 @@ class Backend(ldapcherry.backend.Backend):
                 msg="Constraint violation: " +
                 desc + " " + info)
             raise BadPassword(self.userdn,self.backend_name,info)
+        elif et is ldap.UNWILLING_TO_PERFORM:
+            info = e[0]['info']
+            desc = e[0]['desc']
+            self._logger(
+                severity=logging.ERROR,
+                msg="Unwilling to perform: " +
+                desc + " " + info)
         else:
             self._logger(
                 severity=logging.ERROR,
@@ -350,6 +358,9 @@ class Backend(ldapcherry.backend.Backend):
             except ldap.INVALID_CREDENTIALS:
                 ldap_client.unbind_s()
                 return False
+            except ldap.UNWILLING_TO_PERFORM as e:
+                ldap_client.unbind_s()
+                raise AccountLocked(username,self.backend_name,e[0]['info'])
             ldap_client.unbind_s()
             return True
         else:

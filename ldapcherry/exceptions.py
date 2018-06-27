@@ -223,6 +223,13 @@ class BadPassword(Exception):
         user + " in backend " + backend + ": " + \
         self.info
 
+class AccountLocked(Exception):
+    def __init__(self,user,backend,info):
+        self.info = info
+        self.log = "Account locked for user " + \
+        user + " in backend " + backend + ": " + \
+        self.info
+
 class TemplateRenderError(Exception):
     def __init__(self, error):
         self.log = "Template Render Error: " + error
@@ -239,6 +246,9 @@ def exception_decorator(func):
         except Exception as e:
             cherrypy.response.status = 500
             self._handle_exception(e)
+            if type(e) is AccountLocked:
+                return self.temp['login.tmpl'].render(url=None, \
+                    errormsg="Your account has been locked.  Contact hcc-support@unl.edu for help.")
             username = self._check_session()
             if not username:
                 return self.temp['service_unavailable.tmpl'].render()
