@@ -270,7 +270,7 @@ class Backend(ldapcherry.backend.Backend):
         elif attrs == LISTED_ATTRS:
             attrlist = self.attrlist
         elif attrs == ALL_ATTRS:
-            attrlist = None
+            attrlist = ['*','nsAccountLock']
         else:
             attrlist = None
 
