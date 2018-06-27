@@ -16,7 +16,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .navbar-brand {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 //a.navbar-inverse {
@@ -57,6 +57,14 @@ img.navbar-icon {
 
 .form-signin-heading {
   text-align:  center;
+}
+
+h2.form-signin-heading {
+  margin-top: 10px;
+}
+
+.form-signin-heading h2 {
+  margin-top: 10px;
 }
 
 #login-header {
