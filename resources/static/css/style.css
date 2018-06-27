@@ -86,3 +86,9 @@ h2.form-signin-heading {
 #hcc-contact {
   text-align: center;
 }
+
+#login-error {
+  text-align: center;
+  color: #D00000;
+  font-weight: bold;
+}
