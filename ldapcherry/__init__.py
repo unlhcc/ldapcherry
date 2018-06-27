@@ -914,7 +914,7 @@ class LdapCherry(object):
     def signin(self, url=None):
         """simple signin page
         """
-        return self.temp['login.tmpl'].render(url=url)
+        return self.temp['login.tmpl'].render(url=url,errormsg=None)
 
     @cherrypy.expose
     @exception_decorator
@@ -958,7 +958,7 @@ class LdapCherry(object):
                     qs = ''
                 else:
                     qs = '?url=' + url
-                raise cherrypy.HTTPRedirect("/signin" + qs)
+                return self.temp['login.tmpl'].render(url=url,errormsg="Login failed!  Please check your username or password.")
         else:
             authenticated_username = duo_web.verify_response(self.duo_config['ikey'], self.duo_config['skey'], \
                 self.duo_config['akey'], sig_response)
