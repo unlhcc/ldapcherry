@@ -929,16 +929,15 @@ class LdapCherry(object):
         msg['From'] = fromaddr
         msg['To'] = email
         msg['Subject'] = "HCC password reset"
-        body = "You have requested a password reset for your HCC account." + \
+        body = "You have requested a password reset for your HCC account.  " + \
                 "Please click the link below to reset your password:\n\n%s" % (password_reset_url) \
-                + "\n\nNote that you will be required to authenticate with Duo before being able to reset your password." \
+                + "\n\nThe link is valid for 1 hour.  " \
+                + "Note that you will be required to authenticate with Duo before being able to reset your password." \
                 + "\n\n--------------\nFor help, email hcc-support@unl.edu"
         msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP('localhost')
         server.sendmail(fromaddr,email,msg.as_string())
         server.quit()
-
-        print "URL: ", password_reset_url
 
     @cherrypy.expose
     @exception_decorator
@@ -1384,7 +1383,8 @@ class LdapCherry(object):
                 except KeyError:
                     pass
                 self._send_password_reset_email(username, email)
-                return self.temp['resetpassword.tmpl'].render(notifications=["A reset email has been sent. Please check your inbox."],errormsg=None)
+                return self.temp['resetpassword.tmpl'].render(\
+                    notifications=["A reset email has been sent. Please check your inbox. The link is valid for 1 hour."],errormsg=None)
             else:
                 return self.temp['resetpassword.tmpl'].render(
                     errormsg="The provided username and email combination does not match our records.  For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
