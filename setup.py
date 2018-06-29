@@ -26,7 +26,9 @@ if sys.version_info[0] == 2:
         'CherryPy >= 3.0.0',
         'python-ldap',
         'PyYAML',
-        'Mako'
+        'Mako',
+        'itsdangerous',
+        'duo_web'
         ],
 elif sys.version_info[0] == 3:
     print('unsupported version')
