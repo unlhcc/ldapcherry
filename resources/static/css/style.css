@@ -83,11 +83,23 @@ h2.form-signin-heading {
   float: right;
 }
 
-#hcc-contact {
+#login-header h3{
+  display: inline;
+  color: #FFFFFF;
+  vertical-align: middle;
+}
+
+#hcc-contact, #forgot-password {
   text-align: center;
 }
 
-#login-error {
+#reset-text {
+  text-align: left;
+  float: left;
+  padding-bottom: 10px;
+}
+
+#login-error, #reset-error {
   text-align: center;
   color: #D00000;
   font-weight: bold;
