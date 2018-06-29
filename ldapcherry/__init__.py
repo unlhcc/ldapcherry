@@ -34,6 +34,12 @@ from mako import exceptions
 from sets import Set
 
 import duo_web
+from itsdangerous import URLSafeTimedSerializer
+import socket
+from urllib import urlencode
+import smtplib
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
 
 SESSION_KEY = '_cp_username'
 
@@ -416,7 +422,8 @@ class LdapCherry(object):
         for t in ('index.tmpl', 'error.tmpl', 'login.tmpl', '404.tmpl',
                   'searchadmin.tmpl', 'searchuser.tmpl', 'adduser.tmpl',
                   'roles.tmpl', 'groups.tmpl', 'form.tmpl', 'selfmodify.tmpl',
-                  'modify.tmpl', 'service_unavailable.tmpl', 'duo.tmpl'
+                  'modify.tmpl', 'service_unavailable.tmpl', 'duo.tmpl',
+                  'resetpassword.tmpl',
                   ):
             self.temp[t] = self.temp_lookup.get_template(t)
 
@@ -475,6 +482,8 @@ class LdapCherry(object):
 
             # load the Duo config
             self._init_duo(config)
+
+            self.secret_key = self._get_param('global','password.secretkey',config)
 
             cherrypy.log.error(
                 msg="application started",
@@ -909,6 +918,28 @@ class LdapCherry(object):
     def _checkppolicy(self, password):
         return self.ppolicy.check(password)
 
+    def _send_password_reset_email(self,username,email):
+        """ send the reset email with the token """
+        password_reset_serializer = URLSafeTimedSerializer(self.secret_key)
+        token = password_reset_serializer.dumps('%s+%s' % (username,email),salt='password-reset-salt')
+        password_reset_url = 'https://' + '/'.join([socket.gethostname(),'reset?']) + \
+            urlencode({'token': token})
+        fromaddr = "noreply@%s" % (socket.gethostname())
+        msg = MIMEMultipart()
+        msg['From'] = fromaddr
+        msg['To'] = email
+        msg['Subject'] = "HCC password reset"
+        body = "You have requested a password reset for your HCC account." + \
+                "Please click the link below to reset your password:\n\n%s" % (password_reset_url) \
+                + "\n\nNote that you will be required to authenticate with Duo before being able to reset your password." \
+                + "\n\n--------------\nFor help, email hcc-support@unl.edu"
+        msg.attach(MIMEText(body, 'plain'))
+        server = smtplib.SMTP('localhost')
+        server.sendmail(fromaddr,email,msg.as_string())
+        server.quit()
+
+        print "URL: ", password_reset_url
+
     @cherrypy.expose
     @exception_decorator
     def signin(self, url=None):
@@ -944,7 +975,7 @@ class LdapCherry(object):
 
                 sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
                     self.duo_config['akey'], login)
-                return self.temp['duo.tmpl'].render(url=url,host=self.duo_config['api_hostname'],sig_request=sig_request)
+                return self.temp['duo.tmpl'].render(posturl=None,host=self.duo_config['api_hostname'],sig_request=sig_request)
 
             else:
                 message = "login failed for user '%(user)s'" % {
@@ -1270,3 +1301,93 @@ class LdapCherry(object):
             raise TemplateRenderError(
                     exceptions.text_error_template().render()
                     )
+
+    @cherrypy.expose
+    @exception_decorator
+    def reset(self, username=None, email=None, token=None, sig_response=None):
+        """ reset password user page """
+
+        if sig_response:
+            authenticated_username = duo_web.verify_response(self.duo_config['ikey'], self.duo_config['skey'], \
+                self.duo_config['akey'], sig_response)
+            if authenticated_username:
+                cherrypy.log.error(msg="Duo auth succeeded for %s" % authenticated_username,severity=logging.INFO)
+                cherrypy.session[SESSION_KEY] = cherrypy.request.login = authenticated_username
+
+                user_attrs = self._get_user(authenticated_username)
+                attributes = {}
+                attributes['password'] = self.attributes.get_selfattributes()['password']
+                values = {}
+                values['password'] = self._escape(user_attrs, 'attr_list')['password']
+                form = self.temp['form.tmpl'].render(
+                    attributes=attributes,
+                    values=values,
+                    modify=True,
+                    autofill=False
+                    )
+                return self.temp['selfmodify.tmpl'].render(
+                    form=form,
+                    is_admin=self._is_admin(authenticated_username),
+                    notifications=self._empty_notification(),
+                    )
+            else:
+                return self.temp['resetpassword.tmpl'].render(
+                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+        if token:
+            try:
+                password_reset_serializer = URLSafeTimedSerializer(self.secret_key)
+                (token_username, token_email) = password_reset_serializer.loads(token, salt='password-reset-salt', max_age=3600).split('+')
+            except itsdangerous.SignatureExpired:
+                return self.temp['resetpassword.tmpl'].render(
+                    errormsg="Password reset link expired! For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+            except:
+                return self.temp['resetpassword.tmpl'].render(
+                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+            user_dict = self._get_user(token_username)
+            try:
+                user = user_dict['uid']
+                user_email = user_dict['email']
+                if token_username == user and token_email == user_email:
+                    cherrypy.session['isadmin'] = self._is_admin(token_username)
+                    cherrypy.session['connected'] = True
+                    sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
+                    self.duo_config['akey'], user)
+                    return self.temp['duo.tmpl'].render(posturl='/reset',host=self.duo_config['api_hostname'],sig_request=sig_request)
+                else:
+                    return self.temp['resetpassword.tmpl'].render(
+                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+            except KeyError:
+                return self.temp['resetpassword.tmpl'].render(
+                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+
+        if username and email:
+            user_dict = self._get_user(username)
+            try:
+                user = user_dict['uid']
+                user_email = user_dict['email']
+            except KeyError:
+                return self.temp['resetpassword.tmpl'].render(
+                    errormsg="Username or email not found. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+            if username == user and email == user_email:
+                try:
+                    is_locked = user_dict['nsAccountLock']
+                    if is_locked == 'true':
+                        return self.temp['resetpassword.tmpl'].render(
+                            errormsg="This account has been locked. Contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a> for help."
+                            )
+                except KeyError:
+                    pass
+                self._send_password_reset_email(username, email)
+                return self.temp['resetpassword.tmpl'].render(notifications=["A reset email has been sent. Please check your inbox."],errormsg=None)
+            else:
+                return self.temp['resetpassword.tmpl'].render(
+                    errormsg="The provided username and email combination does not match our records.  For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    )
+        else:
+            return self.temp['resetpassword.tmpl'].render(errormsg=None)
