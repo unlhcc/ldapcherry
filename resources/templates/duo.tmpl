@@ -2,7 +2,7 @@
 <%block name="core">
 <%
 if posturl is None:
-    qs='/login'
+    qs='login'
 else:
     qs=posturl
 %>
@@ -14,12 +14,12 @@ else:
     <body>
     <div class="row clearfix">
     <div class="col-md-12 column" id="login-header">
-       <img src="/static/img/Nebraska_N.png" class="navbar-icon">
+       <img src="static/img/Nebraska_N.png" class="navbar-icon">
        <h2>UNIVERSITY OF NEBRASKA</h2>
     </div>
     </div>
-      <link rel="stylesheet" type="text/css" href="/static/css/Duo-Frame.css">
-      <script src="/static/js/Duo-Web-v2.min.js"></script>
+      <link rel="stylesheet" type="text/css" href="static/css/Duo-Frame.css">
+      <script src="static/js/Duo-Web-v2.min.js"></script>
       <div id="duo">
       <h1>Duo Authentication Prompt</h1>
       <iframe id="duo_iframe"

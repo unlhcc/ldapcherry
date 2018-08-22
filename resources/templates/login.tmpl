@@ -3,7 +3,7 @@
 <%block name="core">
     <div class="row clearfix">
     <div class="col-md-12 column" id="login-header">
-       <a href="/"><img src="/static/img/Nebraska_N.png" class="navbar-icon"></a>
+       <a href="/"><img src="static/img/Nebraska_N.png" class="navbar-icon"></a>
        <a href="/"><h3>HOME</h3></a>
        <h2>UNIVERSITY OF NEBRASKA</h2>
     </div>
@@ -21,7 +21,7 @@ if errormsg is None:
 else:
     errortxt=errormsg
 %>
-            <form method='POST' action='/login${qs}' role="form" class="form-signin">
+            <form method='POST' action='login${qs}' role="form" class="form-signin">
               <div class="form-group">
               <h2 class="form-signin-heading">Welcome to the Holland Computing Center User Portal <br/>Please sign in with your HCC credentials</h2>
                 <div class="input-group">
@@ -47,7 +47,7 @@ else:
     </div>
     <div class="row clearfix" style="margin-top:30px">
         <div class="col-md-3 column"></div>
-        <div class="col-md-6 column"><div id="forgot-password">Forgot your password?  <a href="/reset">Click here to reset it</a></div></div>
+        <div class="col-md-6 column"><div id="forgot-password">Forgot your password?  <a href="reset">Click here to reset it</a></div></div>
         <div class="col-md-3 column"></div>
     </div>
 
