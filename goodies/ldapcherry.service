@@ -1,0 +1,9 @@
+[Unit]
+Description=LdapCherry
+After=syslog.target network.target
+
+[Service]
+ExecStart=/bin/ldapcherryd -c /etc/ldapcherry/ldapcherry.ini
+
+[Install]
+WantedBy=multi-user.target
