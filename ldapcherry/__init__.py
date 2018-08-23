@@ -238,6 +238,24 @@ class LdapCherry(object):
             'api_hostname',
             config)
 
+    def _init_email(self, config):
+        self.email_config = {}
+        self.email_config['fromaddr'] = self._get_param(
+            'email',
+            'fromaddr',
+            config)
+        self.email_config['subject'] = self._get_param(
+            'email',
+            'subject',
+            config)
+        self.email_config['body'] = self._get_param(
+            'email',
+            'body',
+            config)
+        self.email_config['reseturl'] = self._get_param(
+            'email',
+            'reseturl',
+            config)
 
     def _init_ppolicy(self, config):
         module = self._get_param(
@@ -482,6 +500,9 @@ class LdapCherry(object):
 
             # load the Duo config
             self._init_duo(config)
+
+            # load the email config
+            self._init_email(config)
 
             self.secret_key = self._get_param('global','password.secretkey',config)
 
@@ -922,21 +943,16 @@ class LdapCherry(object):
         """ send the reset email with the token """
         password_reset_serializer = URLSafeTimedSerializer(self.secret_key)
         token = password_reset_serializer.dumps('%s+%s' % (username,email),salt='password-reset-salt')
-        password_reset_url = 'https://' + '/'.join([socket.gethostname(),'reset?']) + \
+        password_reset_url = 'https://' + '/'.join([self.email_config['reseturl'],'reset?']) + \
             urlencode({'token': token})
-        fromaddr = "noreply@%s" % (socket.gethostname())
         msg = MIMEMultipart()
-        msg['From'] = fromaddr
+        msg['From'] = self.email_config['fromaddr']
         msg['To'] = email
-        msg['Subject'] = "HCC password reset"
-        body = "You have requested a password reset for your HCC account.  " + \
-                "Please click the link below to reset your password:\n\n%s" % (password_reset_url) \
-                + "\n\nThe link is valid for 1 hour.  " \
-                + "Note that you will be required to authenticate with Duo before being able to reset your password." \
-                + "\n\n--------------\nFor help, email hcc-support@unl.edu"
+        msg['Subject'] = self.email_config['subject']
+        body = self.email_config['body'] % (password_reset_url)
         msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP('localhost')
-        server.sendmail(fromaddr,email,msg.as_string())
+        server.sendmail(self.email_config['fromaddr'],email,msg.as_string())
         server.quit()
 
     @cherrypy.expose
@@ -1354,7 +1370,7 @@ class LdapCherry(object):
                     cherrypy.session['connected'] = True
                     sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
                     self.duo_config['akey'], user)
-                    return self.temp['duo.tmpl'].render(posturl='/reset',host=self.duo_config['api_hostname'],sig_request=sig_request)
+                    return self.temp['duo.tmpl'].render(posturl='reset',host=self.duo_config['api_hostname'],sig_request=sig_request)
                 else:
                     return self.temp['resetpassword.tmpl'].render(
                     errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
