@@ -15,7 +15,7 @@ import logging
 import logging.handlers
 from operator import itemgetter
 from socket import error as socket_error
-import base64
+import urllib
 import cgi
 
 from exceptions import *
@@ -36,7 +36,6 @@ from sets import Set
 import duo_web
 from itsdangerous import URLSafeTimedSerializer
 import socket
-from urllib import urlencode
 import smtplib
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
@@ -433,7 +432,8 @@ class LdapCherry(object):
         )
         # preload templates
         self.temp_lookup = lookup.TemplateLookup(
-            directories=self.template_dir, input_encoding='utf-8'
+            directories=self.template_dir, input_encoding='utf-8',
+            default_filters=['unicode', 'h']
             )
         # load each template
         self.temp = {}
@@ -628,7 +628,7 @@ class LdapCherry(object):
 
     def _check_auth(self, must_admin, redir_login=True):
         """ check if a user is autheticated and, optionnaly an administrator
-        if user not authentifaced -> redirection to login page (with base64
+        if user not authenticated -> redirect to login page (with escaped URL
             of the originaly requested page (redirection after login)
         if user authenticated, not admin and must_admin enabled -> 403 error
         @boolean must_admin: flag "user must be an administrator to access
@@ -643,13 +643,13 @@ class LdapCherry(object):
             qs = ''
         else:
             qs = '?' + cherrypy.request.query_string
-        # base64 of the requested URL
-        b64requrl = base64.b64encode(cherrypy.url() + qs)
+        # Escaped version of the requested URL
+        quoted_requrl = urllib.quote_plus(cherrypy.url() + qs)
         if not username:
-            # return to login page (with base64 of the url in query string
+            # return to login page (with quoted url in query string)
             if redir_login:
                 raise cherrypy.HTTPRedirect(
-                    "/signin?url=%(url)s" % {'url': b64requrl},
+                    "/signin?url=%(url)s" % {'url': quoted_requrl},
                     )
             else:
                 raise cherrypy.HTTPError(
@@ -661,7 +661,7 @@ class LdapCherry(object):
                 or not cherrypy.session['connected']:
             if redir_login:
                 raise cherrypy.HTTPRedirect(
-                    "/signin?url=%(url)s" % {'url': b64requrl},
+                    "/signin?url=%(url)s" % {'url': quoted_requrl},
                     )
             else:
                 raise cherrypy.HTTPError(
@@ -686,7 +686,7 @@ class LdapCherry(object):
         else:
             if redir_login:
                 raise cherrypy.HTTPRedirect(
-                    "/signin?url=%(url)s" % {'url': b64requrl},
+                    "/signin?url=%(url)s" % {'url': quoted_requrl},
                     )
             else:
                 raise cherrypy.HTTPError(
@@ -944,7 +944,7 @@ class LdapCherry(object):
         password_reset_serializer = URLSafeTimedSerializer(self.secret_key)
         token = password_reset_serializer.dumps('%s+%s' % (username,email),salt='password-reset-salt')
         password_reset_url = 'https://' + '/'.join([self.email_config['reseturl'],'reset?']) + \
-            urlencode({'token': token})
+            urllib.urlencode({'token': token})
         msg = MIMEMultipart()
         msg['From'] = self.email_config['fromaddr']
         msg['To'] = email
@@ -990,7 +990,7 @@ class LdapCherry(object):
 
                 sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
                     self.duo_config['akey'], login)
-                return self.temp['duo.tmpl'].render(posturl=None,host=self.duo_config['api_hostname'],sig_request=sig_request)
+                return self.temp['duo.tmpl'].render(url=url,host=self.duo_config['api_hostname'],sig_request=sig_request)
 
             else:
                 message = "login failed for user '%(user)s'" % {
@@ -1000,10 +1000,6 @@ class LdapCherry(object):
                     msg=message,
                     severity=logging.WARNING
                 )
-                if url is None:
-                    qs = ''
-                else:
-                    qs = '?url=' + url
                 return self.temp['login.tmpl'].render(url=url,errormsg="Login failed!  Please check your username or password.")
         else:
             authenticated_username = duo_web.verify_response(self.duo_config['ikey'], self.duo_config['skey'], \
@@ -1014,10 +1010,8 @@ class LdapCherry(object):
                 if url is None:
                     redirect = "/"
                 else:
-                    redirect = base64.b64decode(url)
+                    redirect = url
                 raise cherrypy.HTTPRedirect(redirect)
-
-
 
     @cherrypy.expose
     @exception_decorator
@@ -1370,7 +1364,7 @@ class LdapCherry(object):
                     cherrypy.session['connected'] = True
                     sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
                     self.duo_config['akey'], user)
-                    return self.temp['duo.tmpl'].render(posturl='reset',host=self.duo_config['api_hostname'],sig_request=sig_request)
+                    return self.temp['duo.tmpl'].render(url='reset',host=self.duo_config['api_hostname'],sig_request=sig_request)
                 else:
                     return self.temp['resetpassword.tmpl'].render(
                     errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
