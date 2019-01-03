@@ -1,11 +1,5 @@
 <%inherit file="base.tmpl"/>
 <%block name="core">
-<%
-if posturl is None:
-    qs='login'
-else:
-    qs=posturl
-%>
     <head>
       <title>Duo Authentication Prompt</title>
         <meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -27,7 +21,12 @@ else:
               frameborder="0"
               data-host=${host}
               data-sig-request=${sig_request}
-              data-post-action="${qs}">
+% if url:
+              data-post-action="login?url=${url | u}"
+% else:
+              data-post-action="login"
+% endif
+      >
        </iframe>
        </div>
     </body>
