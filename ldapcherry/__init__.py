@@ -1256,7 +1256,7 @@ class LdapCherry(object):
 
     @cherrypy.expose
     @exception_decorator
-    def default(self, attr='', **params):
+    def default(self, *args, **params):
         cherrypy.response.status = 404
         self._check_auth(must_admin=False)
         is_admin = self._check_admin()
