@@ -1341,7 +1341,7 @@ class LdapCherry(object):
                     )
             else:
                 return self.temp['resetpassword.tmpl'].render(
-                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="An error has occurred."
                     )
         if token:
             try:
@@ -1349,11 +1349,11 @@ class LdapCherry(object):
                 (token_username, token_email) = password_reset_serializer.loads(token, salt='password-reset-salt', max_age=3600).split('+')
             except itsdangerous.SignatureExpired:
                 return self.temp['resetpassword.tmpl'].render(
-                    errormsg="Password reset link expired! For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="Password reset link expired!"
                     )
             except:
                 return self.temp['resetpassword.tmpl'].render(
-                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="An error has occurred."
                     )
             user_dict = self._get_user(token_username)
             try:
@@ -1367,11 +1367,11 @@ class LdapCherry(object):
                     return self.temp['duo.tmpl'].render(url='selfmodify',host=self.duo_config['api_hostname'],sig_request=sig_request)
                 else:
                     return self.temp['resetpassword.tmpl'].render(
-                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="An error has occurred."
                     )
             except KeyError:
                 return self.temp['resetpassword.tmpl'].render(
-                    errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="An error has occurred."
                     )
 
         if username and email:
@@ -1381,14 +1381,14 @@ class LdapCherry(object):
                 user_email = user_dict['email']
             except KeyError:
                 return self.temp['resetpassword.tmpl'].render(
-                    errormsg="Username or email not found. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="Username or email not found."
                     )
             if username == user and email == user_email:
                 try:
                     is_locked = user_dict['nsAccountLock']
                     if is_locked == 'true':
                         return self.temp['resetpassword.tmpl'].render(
-                            errormsg="This account has been locked. Contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a> for help."
+                            errormsg="This account has been locked."
                             )
                 except KeyError:
                     pass
@@ -1397,7 +1397,7 @@ class LdapCherry(object):
                     notifications=["A reset email has been sent. Please check your inbox. The link is valid for 1 hour."],errormsg=None)
             else:
                 return self.temp['resetpassword.tmpl'].render(
-                    errormsg="The provided username and email combination does not match our records.  For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
+                    errormsg="The provided username and email combination does not match our records."
                     )
         else:
             return self.temp['resetpassword.tmpl'].render(errormsg=None)

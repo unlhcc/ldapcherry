@@ -11,12 +11,6 @@
     <div class="row clearfix" style="margin-top:30px">
         <div class="col-md-3 column"></div>
         <div class="col-md-6 column well">
-<%
-if errormsg is None:
-    errortxt=''
-else:
-    errortxt=errormsg
-%>
             <form method='POST' role="form" class="form-signin"
 % if url:
                 action='login?url=${url | u}'
@@ -42,7 +36,12 @@ else:
                   <button class="btn btn-default blue" type="submit"><span class="glyphicon glyphicon-off"></span> Sign in</button>
                 </div>
               </div>
-              <div id="login-error">${errortxt}</div>
+% if errormsg:
+              <div id="login-error">
+                ${errormsg}
+                For help, contact <a href="mailto:hcc-support@unl.edu">hcc-support@unl.edu</a>.
+              </div>
+% endif
             </form>
         </div>
         <div class="col-md-3 column"></div>

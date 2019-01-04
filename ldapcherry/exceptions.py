@@ -248,7 +248,7 @@ def exception_decorator(func):
             self._handle_exception(e)
             if type(e) is AccountLocked:
                 return self.temp['login.tmpl'].render(url=None, \
-                    errormsg="Your account has been locked.  Contact hcc-support@unl.edu for help.")
+                    errormsg="Your account has been locked.")
             username = self._check_session()
             if not username:
                 return self.temp['service_unavailable.tmpl'].render()
