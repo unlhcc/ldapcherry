@@ -1364,7 +1364,7 @@ class LdapCherry(object):
                     cherrypy.session['connected'] = True
                     sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
                     self.duo_config['akey'], user)
-                    return self.temp['duo.tmpl'].render(url='reset',host=self.duo_config['api_hostname'],sig_request=sig_request)
+                    return self.temp['duo.tmpl'].render(url='selfmodify',host=self.duo_config['api_hostname'],sig_request=sig_request)
                 else:
                     return self.temp['resetpassword.tmpl'].render(
                     errormsg="An error has occurred. For help, contact <a href=mailto:hcc-support@unl.edu>hcc-support@unl.edu</a>."
