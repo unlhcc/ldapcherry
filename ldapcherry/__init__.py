@@ -255,6 +255,31 @@ class LdapCherry(object):
             'email',
             'reseturl',
             config)
+        self.email_config['smtp_server'] = self._get_param(
+            'email',
+            'smtp_server',
+            config,
+            'localhost')
+        self.email_config['smtp_port'] = self._get_param(
+            'email',
+            'smtp_port',
+            config,
+            "25")
+        self.email_config['smtp_username'] = self._get_param(
+            'email',
+            'smtp_username',
+            config,
+            "")
+        self.email_config['smtp_password'] = self._get_param(
+            'email',
+            'smtp_password',
+            config,
+            "")
+        self.email_config['smtp_use_tls'] = self._get_param(
+            'email',
+            'smtp_use_tls',
+            config,
+            False)
 
     def _init_ppolicy(self, config):
         module = self._get_param(
@@ -951,7 +976,11 @@ class LdapCherry(object):
         msg['Subject'] = self.email_config['subject']
         body = self.email_config['body'] % (password_reset_url)
         msg.attach(MIMEText(body, 'plain'))
-        server = smtplib.SMTP('localhost')
+        server = smtplib.SMTP(host=self.email_config['smtp_server'],port=self.email_config['smtp_port'],timeout=3)
+        if self.email_config['smtp_use_tls']:
+            server.starttls()
+        if self.email_config['smtp_username'] and self.email_config['smtp_password']:
+            server.login(self.email_config['smtp_username'],self.email_config['smtp_password'])
         server.sendmail(self.email_config['fromaddr'],email,msg.as_string())
         server.quit()
 
@@ -1392,7 +1421,12 @@ class LdapCherry(object):
                             )
                 except KeyError:
                     pass
-                self._send_password_reset_email(username, email)
+                try:
+                    self._send_password_reset_email(username, email)
+                except Exception as e:
+                    self._handle_exception(e)
+                    return self.temp['resetpassword.tmpl'].render(
+                        errormsg="Email failed to send, contact support for assistance.")
                 return self.temp['resetpassword.tmpl'].render(\
                     notifications=["A reset email has been sent. Please check your inbox. The link is valid for 1 hour."],errormsg=None)
             else:
