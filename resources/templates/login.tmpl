@@ -14,6 +14,8 @@
             <form method='POST' role="form" class="form-signin"
 % if url:
                 action='login?url=${url | u}'
+% elif dest:
+                action='login?dest=${dest | u}'
 % else:
                 action='login'
 % endif
