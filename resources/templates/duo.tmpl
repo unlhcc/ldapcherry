@@ -23,6 +23,8 @@
               data-sig-request=${sig_request}
 % if url:
               data-post-action="login?url=${url | u}"
+% elif dest:
+                action='login?dest=${dest | u}'
 % else:
               data-post-action="login"
 % endif

@@ -16,7 +16,11 @@ import logging.handlers
 from operator import itemgetter
 from socket import error as socket_error
 import urllib
+import urlparse
 import cgi
+import hmac
+import hashlib
+import time
 
 from exceptions import *
 from ldapcherry.lclogging import *
@@ -237,6 +241,19 @@ class LdapCherry(object):
             'api_hostname',
             config)
 
+    def _init_freshdesk(self,config):
+        self.freshdesk_config = {}
+        self.freshdesk_config['base_url'] = self._get_param(
+            'freshdesk',
+            'base_url',
+            config,
+            "")
+        self.freshdesk_config['shared_secret'] = self._get_param(
+            'freshdesk',
+            'shared_secret',
+            config,
+            "")
+
     def _init_email(self, config):
         self.email_config = {}
         self.email_config['fromaddr'] = self._get_param(
@@ -323,6 +340,29 @@ class LdapCherry(object):
             severity=logging.DEBUG
         )
         self.roles = Roles(self.roles_file)
+
+    def _redirects(self, dest, username):
+        redirect_functions = { 'freshdesk' : self._redirect_freshdesk }
+        try:
+            redirect_dest = redirect_functions[dest](username)
+        except KeyError:
+            cherrypy.log.error(msg="Redirect destination '%s' not configured" % (dest),
+                severity=logging.INFO)
+            redirect_dest = "/"
+
+        return redirect_dest
+
+    def _redirect_freshdesk(self, username):
+    # https://support.freshdesk.com/support/solutions/articles/31166-single-sign-on-remote-authentication-in-freshdesk
+        user_dict = self._get_user(username)
+        user_email = user_dict['email']
+        user_name = user_dict['cn']
+        now = str(int(time.time()))
+        to_be_hashed = user_name + self.freshdesk_config['shared_secret'] + user_email + now
+        h = hmac.new( self.freshdesk_config['shared_secret'], to_be_hashed, hashlib.md5 )
+        params = { 'name': user_name, 'email': user_email, 'timestamp': now, 'hash': h.hexdigest() }
+        redirect_dest = urlparse.urlunparse(['https', self.freshdesk_config['base_url'], '', '', urllib.urlencode(params), ''])
+        return redirect_dest
 
     def _set_access_log(self, config, level):
         """ Configure access logs
@@ -528,6 +568,9 @@ class LdapCherry(object):
 
             # load the email config
             self._init_email(config)
+
+            # load the freshdesk config
+            self._init_freshdesk(config)
 
             self.secret_key = self._get_param('global','password.secretkey',config)
 
@@ -986,14 +1029,14 @@ class LdapCherry(object):
 
     @cherrypy.expose
     @exception_decorator
-    def signin(self, url=None):
+    def signin(self, url=None, dest=None, host_url=None):
         """simple signin page
         """
-        return self.temp['login.tmpl'].render(url=url,errormsg=None)
+        return self.temp['login.tmpl'].render(url=url,dest=dest,errormsg=None)
 
     @cherrypy.expose
     @exception_decorator
-    def login(self, login=None, password=None, url=None, sig_request=None, sig_response=None):
+    def login(self, login=None, password=None, url=None, sig_request=None, sig_response=None, dest=None):
         """login page
         """
         if not sig_response:
@@ -1019,7 +1062,7 @@ class LdapCherry(object):
 
                 sig_request = duo_web.sign_request(self.duo_config['ikey'], self.duo_config['skey'], \
                     self.duo_config['akey'], login)
-                return self.temp['duo.tmpl'].render(url=url,host=self.duo_config['api_hostname'],sig_request=sig_request)
+                return self.temp['duo.tmpl'].render(url=url,dest=dest,host=self.duo_config['api_hostname'],sig_request=sig_request)
 
             else:
                 message = "login failed for user '%(user)s'" % {
@@ -1029,22 +1072,30 @@ class LdapCherry(object):
                     msg=message,
                     severity=logging.WARNING
                 )
-                return self.temp['login.tmpl'].render(url=url,errormsg="Login failed!  Please check your username or password.")
+                return self.temp['login.tmpl'].render(url=url,dest=dest,errormsg="Login failed!  Please check your username or password.")
         else:
             authenticated_username = duo_web.verify_response(self.duo_config['ikey'], self.duo_config['skey'], \
                 self.duo_config['akey'], sig_response)
             if authenticated_username:
                 cherrypy.log.error(msg="Duo auth succeeded for %s" % authenticated_username,severity=logging.INFO)
                 cherrypy.session[SESSION_KEY] = cherrypy.request.login = authenticated_username
+
+                if dest:
+                    cherrypy.log.error(msg="Redirect dest is %s" % dest,severity=logging.INFO)
+                    redirect = self._redirects(dest,authenticated_username)
+                    cherrypy.log.error(msg="Redirecting to '%s'" % redirect,severity=logging.INFO)
+                    raise cherrypy.HTTPRedirect(redirect)
+
                 if url is None:
                     redirect = "/"
                 else:
                     redirect = url
+
                 raise cherrypy.HTTPRedirect(redirect)
 
     @cherrypy.expose
     @exception_decorator
-    def logout(self):
+    def logout(self,host_url=None):
         """ logout page
         """
         sess = cherrypy.session
